@@ -6,7 +6,7 @@ This is a fork specifically made for both the qemu-t8030 and qemu-apple-silicon 
 
 For the normal project for which this fork is based off, [go here](https://github.com/libimobiledevice/idevicerestore).
 
-Links for the recommend projects this fork is most likely to be use with. The 2nd one is a fork of the 1st one and has last been updated 8 months ago. It depends on which one you want to use.
+Links for the recommend projects this fork is most likely to be use with. The 2nd one is a fork of the 1st one and has been in sort-of active development while the 1st hasn't been worked on since late-2022 and was archived in 2023. It depends on which one you want to use.
 
 (https://github.com/TrungNguyen1909/qemu-t8030)
 
