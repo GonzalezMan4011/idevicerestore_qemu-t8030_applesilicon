@@ -1,8 +1,19 @@
-# idevicerestore
+# idevicerestore_qemu-t8030_applesilicon
 
 *A command-line application to restore firmware files to iOS devices.*
 
-![](https://github.com/libimobiledevice/idevicerestore/actions/workflows/build.yml/badge.svg)
+This is a fork specifically made for both the qemu-t8030 and qemu-apple-silicon (and other respective, if any) projects.
+
+For the normal project for which this fork is based off, [go here](https://github.com/libimobiledevice/idevicerestore).
+
+Links for the recommend projects this fork is most likely to be use with. The 2nd one is a fork of the 1st one and has last been updated 8 months ago. It depends on which one you want to use.
+
+(https://github.com/TrungNguyen1909/qemu-t8030)
+
+(https://github.com/ChefKissInc/qemu-apple-silicon)
+
+
+![](https://github.com/GonzalezMan4011/idevicerestore_qemu-t8030_applesilicon/actions/workflows/build.yml/badge.svg)
 
 ## Features
 
@@ -26,6 +37,7 @@ Some key features are:
 - **AP Ticket:** Use custom AP ticket from a file
 - **Cross-Platform:** Tested on Linux, macOS, Windows and Android platforms
 - **History:** Developed since 2010
+- **QEMU support:** Modified to support the required patches need for some/most iOS on QEMU projects (as seen above).
 
 **WARNING:** This tool can easily __destroy your user data__ irreversibly.
 
@@ -74,7 +86,7 @@ clone [these libraries](https://github.com/libimobiledevice/) separately and rep
 
 Continue with cloning the actual project repository:
 ```shell
-git clone https://github.com/libimobiledevice/idevicerestore.git
+git clone https://github.com/GonzalezMan4011/idevicerestore_qemu-t8030_applesilicon
 cd idevicerestore
 ```
 
@@ -146,12 +158,12 @@ We are still working on the guidelines so bear with us!
 
 ## Links
 
-* Homepage: https://libimobiledevice.org/
-* Repository: https://git.libimobiledevice.org/idevicerestore.git
-* Repository (Mirror): https://github.com/libimobiledevice/idevicerestore.git
-* Issue Tracker: https://github.com/libimobiledevice/idevicerestore/issues
-* Mailing List: https://lists.libimobiledevice.org/mailman/listinfo/libimobiledevice-devel
-* Twitter: https://twitter.com/libimobiledev
+* Original Project Homepage: https://libimobiledevice.org/
+* Original Project Repository: https://git.libimobiledevice.org/idevicerestore.git
+* Original Project Repository (Mirror): https://github.com/libimobiledevice/idevicerestore.git
+* Issue Tracker: https://github.com/GonzalezMan4011/idevicerestore_qemu-t8030_applesilicon/issues
+* Original Project Mailing List: https://lists.libimobiledevice.org/mailman/listinfo/libimobiledevice-devel
+* Original Project Twitter: https://twitter.com/libimobiledev
 
 ## License
 
@@ -163,7 +175,9 @@ also included in the repository in the `COPYING` file.
 Apple, iPhone, iPad, iPod, iPod Touch, Apple TV, Apple Watch, Mac, iOS,
 iPadOS, tvOS, watchOS, and macOS are trademarks of Apple Inc.
 
+libimobiledevice for the original project.
+
 This project is an independent software application and has not been
 authorized, sponsored, or otherwise approved by Apple Inc.
 
-README Updated on: 2022-04-04
+README Updated on: 2024-03-14
