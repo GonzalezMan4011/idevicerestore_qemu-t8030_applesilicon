@@ -670,6 +670,7 @@ int idevicerestore_start(struct idevicerestore_client_t* client)
 
 	if (client->mode == MODE_RESTORE) {
 		if (!(client->flags & FLAG_ALLOW_RESTORE_MODE)) {
+			tss_enabled = 0;
 			if (restore_reboot(client) < 0) {
 				error("ERROR: Unable to exit restore mode\n");
 				return -2;
@@ -1175,7 +1176,7 @@ int idevicerestore_start(struct idevicerestore_client_t* client)
 	idevicerestore_progress(client, RESTORE_STEP_PREPARE, 0.2);
 
 	/* retrieve shsh blobs if required */
-	if (tss_enabled) {
+	if (tss_enabled && !client->root_ticket) {
 		int stashbag_commit_required = 0;
 
 		if (client->mode == MODE_NORMAL && !(client->flags & FLAG_ERASE) && !(client->flags & FLAG_SHSHONLY)) {
@@ -1206,6 +1207,12 @@ int idevicerestore_start(struct idevicerestore_client_t* client)
 				plist_free(manifest);
 			}
 		}
+	} else if (tss_enabled) {
+        client->tss = plist_new_dict();
+        plist_dict_set_item(client->tss, "ApImg4Ticket",
+                            plist_new_data((const char *)client->root_ticket,
+                                           client->root_ticket_len));
+    }
 
 		if (client->build_major > 8) {
 			unsigned char* nonce = NULL;
