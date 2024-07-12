@@ -1207,12 +1207,6 @@ int idevicerestore_start(struct idevicerestore_client_t* client)
 				plist_free(manifest);
 			}
 		}
-	} else if (tss_enabled) {
-        client->tss = plist_new_dict();
-        plist_dict_set_item(client->tss, "ApImg4Ticket",
-                            plist_new_data((const char *)client->root_ticket,
-                                           client->root_ticket_len));
-    }
 
 		if (client->build_major > 8) {
 			unsigned char* nonce = NULL;
@@ -1279,7 +1273,12 @@ int idevicerestore_start(struct idevicerestore_client_t* client)
 				return -1;
 			}
 		}
-	}
+	} else if (tss_enabled) {
+        client->tss = plist_new_dict();
+        plist_dict_set_item(client->tss, "ApImg4Ticket",
+                            plist_new_data((const char *)client->root_ticket,
+                                           client->root_ticket_len));
+    }
 
 	if (client->flags & FLAG_QUIT) {
 		return -1;
