@@ -350,8 +350,10 @@ int idevicerestore_start(struct idevicerestore_client_t* client)
 	if (client->debug_level > 0) {
 		idevicerestore_debug = 1;
 		if (client->debug_level > 1) {
-			idevice_set_debug_level(1);
 			irecv_set_debug_level(1);
+		}
+		if (client->debug_level > 2) {
+			idevice_set_debug_level(1);
 		}
 		tss_set_debug_level(client->debug_level);
 	}
@@ -391,7 +393,7 @@ int idevicerestore_start(struct idevicerestore_client_t* client)
 		}
 
 		char wtfname[256];
-		sprintf(wtfname, "Firmware/dfu/WTF.s5l%04xxall.RELEASE.dfu", cpid);
+		snprintf(wtfname, sizeof(wtfname), "Firmware/dfu/WTF.s5l%04xxall.RELEASE.dfu", cpid);
 		unsigned char* wtftmp = NULL;
 		unsigned int wtfsize = 0;
 
@@ -816,8 +818,9 @@ int idevicerestore_start(struct idevicerestore_client_t* client)
 			}
 			return -2;
 		}
+		dfu_client_free(client);
 		debug("Waiting for device to reconnect in DFU mode...\n");
-		cond_wait_timeout(&client->device_event_cond, &client->device_event_mutex, 5000);
+		cond_wait_timeout(&client->device_event_cond, &client->device_event_mutex, 20000);
 		if (client->mode != MODE_DFU || (client->flags & FLAG_QUIT)) {
 			mutex_unlock(&client->device_event_mutex);
 			if (!(client->flags & FLAG_QUIT)) {
@@ -875,7 +878,7 @@ int idevicerestore_start(struct idevicerestore_client_t* client)
 				x++;
 			}
 
-			sprintf(p_all_flash, "Firmware/all_flash/all_flash.%s.%s", lcmodel, "production");
+			snprintf(p_all_flash, sizeof(p_all_flash), "Firmware/all_flash/all_flash.%s.%s", lcmodel, "production");
 			strcpy(tmpstr, p_all_flash);
 			strcat(tmpstr, "/manifest");
 
@@ -925,7 +928,7 @@ int idevicerestore_start(struct idevicerestore_client_t* client)
 			}
 
 			// add iBSS
-			sprintf(tmpstr, "Firmware/dfu/iBSS.%s.%s.dfu", lcmodel, "RELEASE");
+			snprintf(tmpstr, sizeof(tmpstr), "Firmware/dfu/iBSS.%s.%s.dfu", lcmodel, "RELEASE");
 			inf = plist_new_dict();
 			plist_dict_set_item(inf, "Path", plist_new_string(tmpstr));
 			comp = plist_new_dict();
@@ -933,7 +936,7 @@ int idevicerestore_start(struct idevicerestore_client_t* client)
 			plist_dict_set_item(manifest, "iBSS", comp);
 
 			// add iBEC
-			sprintf(tmpstr, "Firmware/dfu/iBEC.%s.%s.dfu", lcmodel, "RELEASE");
+			snprintf(tmpstr, sizeof(tmpstr), "Firmware/dfu/iBEC.%s.%s.dfu", lcmodel, "RELEASE");
 			inf = plist_new_dict();
 			plist_dict_set_item(inf, "Path", plist_new_string(tmpstr));
 			comp = plist_new_dict();
@@ -1257,6 +1260,16 @@ int idevicerestore_start(struct idevicerestore_client_t* client)
 					error("ERROR: Unable to get SHSH blobs for this device (recovery OS Root Ticket)\n");
 					return -1;
 				}
+			} else {
+				plist_t recovery_variant = plist_access_path(build_identity, 2, "Info", "RecoveryVariant");
+				if (recovery_variant) {
+					const char* recovery_variant_str = plist_get_string_ptr(recovery_variant, NULL);
+					plist_t recovery_build_identity = build_manifest_get_build_identity_for_model_with_variant(client->build_manifest, client->device->hardware_model, recovery_variant_str, 1);
+					if (get_tss_response(client, recovery_build_identity, &client->tss_recoveryos_root_ticket) < 0) {
+						error("ERROR: Unable to get SHSH blobs for this device (%s)\n", recovery_variant_str);
+						return -1;
+					}
+				}
 			}
 		}
 
@@ -1304,7 +1317,7 @@ int idevicerestore_start(struct idevicerestore_client_t* client)
 					strcpy(zfn, "shsh");
 				}
 				mkdir_with_parents(zfn, 0755);
-				sprintf(zfn+strlen(zfn), "/%" PRIu64 "-%s-%s.shsh", client->ecid, client->device->product_type, client->version);
+				snprintf(&zfn[0]+strlen(zfn), sizeof(zfn)-strlen(zfn), "/%" PRIu64 "-%s-%s.shsh", client->ecid, client->device->product_type, client->version);
 				struct stat fst;
 				if (stat(zfn, &fst) != 0) {
 					gzFile zf = gzopen(zfn, "wb");
@@ -1410,6 +1423,7 @@ int idevicerestore_start(struct idevicerestore_client_t* client)
 			}
 			return -2;
 		}
+		recovery_client_free(client);
 		debug("Waiting for device to reconnect in recovery mode...\n");
 		cond_wait_timeout(&client->device_event_cond, &client->device_event_mutex, 60000);
 		if (client->mode != MODE_RECOVERY || (client->flags & FLAG_QUIT)) {
@@ -1486,7 +1500,11 @@ int idevicerestore_start(struct idevicerestore_client_t* client)
 		if (client->mode != MODE_RESTORE || (client->flags & FLAG_QUIT)) {
 			mutex_unlock(&client->device_event_mutex);
 			error("ERROR: Device failed to enter restore mode.\n");
-			error("Please make sure that usbmuxd is running.\n");
+			if (client->mode == MODE_UNKNOWN) {
+				error("Make sure that usbmuxd is running.\n");
+			} else if (client->mode == MODE_RECOVERY) {
+				error("Device reconnected in recovery mode, most likely image personalization failed.\n");
+			}
 			return -1;
 		}
 		mutex_unlock(&client->device_event_mutex);
@@ -1759,8 +1777,9 @@ int main(int argc, char* argv[]) {
 				if (!p || *(p+1) == '\0') {
 					// no path component, add default path
 					const char default_path[] = "/TSS/controller?action=2";
-					char* newurl = malloc(strlen(optarg)+sizeof(default_path));
-					sprintf(newurl, "%s%s", optarg, (p) ? default_path+1 : default_path);
+					size_t usize = strlen(optarg)+sizeof(default_path);
+					char* newurl = malloc(usize);
+					snprintf(newurl, usize, "%s%s", optarg, (p) ? default_path+1 : default_path);
 					client->tss_url = newurl;
 				} else {
 					client->tss_url = strdup(optarg);
@@ -1841,7 +1860,7 @@ int main(int argc, char* argv[]) {
 			break;
 
 		case 'v':
-			info("%s %s\n", PACKAGE_NAME, PACKAGE_VERSION);
+			info("%s %s (libirecovery %s, libtatsu %s)\n", PACKAGE_NAME, PACKAGE_VERSION, irecv_version(), libtatsu_version());
 			return EXIT_SUCCESS;
 
 		case 'T': {
@@ -1899,7 +1918,7 @@ int main(int argc, char* argv[]) {
 		return EXIT_FAILURE;
 	}
 
-	info("%s %s\n", PACKAGE_NAME, PACKAGE_VERSION);
+	info("%s %s (libirecovery %s, libtatsu %s)\n", PACKAGE_NAME, PACKAGE_VERSION, irecv_version(), libtatsu_version());
 
 	if (ipsw) {
 		// verify if ipsw file exists
@@ -2206,9 +2225,9 @@ int get_tss_response(struct idevicerestore_client_t* client, plist_t build_ident
 		char zfn[1024];
 		if (client->version) {
 			if (client->cache_dir) {
-				sprintf(zfn, "%s/shsh/%" PRIu64 "-%s-%s.shsh", client->cache_dir, client->ecid, client->device->product_type, client->version);
+				snprintf(zfn, sizeof(zfn), "%s/shsh/%" PRIu64 "-%s-%s.shsh", client->cache_dir, client->ecid, client->device->product_type, client->version);
 			} else {
-				sprintf(zfn, "shsh/%" PRIu64 "-%s-%s.shsh", client->ecid, client->device->product_type, client->version);
+				snprintf(zfn, sizeof(zfn), "shsh/%" PRIu64 "-%s-%s.shsh", client->ecid, client->device->product_type, client->version);
 			}
 			struct stat fst;
 			if (stat(zfn, &fst) == 0) {
